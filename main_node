@@ -1,0 +1,69 @@
+#include "ros/ros.h"
+#include "ros/duration"
+
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/connection.h>
+#include <boost/bind.hpp>
+
+#include <dynamic_reconfigure/server.h>
+#include <odometry/parametersConfig.h>
+ 
+ // Output-related libraries
+#include <tf/transform_broadcaster.h>
+#include <nav_msgs/Odometry.h>
+
+#include "odometry/floatStamped.h"
+#include "odometry/CustomOdometry.h"
+
+//Values given by the text
+#define BASELINE 0.583
+#define RADIUS 0.1575
+
+//Default values given by the text
+#define INIT_POSITION_X 0.0
+#define INIT_POSITION_Y 0.0
+#define INIT_POSITION_THETA 0.0
+#define INIT_VELOCITY_X 0.0
+#define INIT_VELOCITY_Y 0.0
+#define INIT_ANGULAR_VELOCITY 0.0
+#define INIT_VELOCITY_LEFT 0.0
+#define INIT_VELOCITY_RIGHT 0.0
+
+//Approximation choice
+#define EULER_APPROXIMATION true
+#define RUNGE_KUTTA_APPROXIMATION false
+
+//Struct for odometry pose
+#typedef struct odometry_values{
+    double x;
+    double y;
+    double theta;
+
+    double v_x;
+    double v_y;
+    double omega;
+    double v_r;
+    double v_l;
+} OdometryValues;
+
+#typedef struct skid_steering_variables{
+    double omega_r;
+    double omega_l;
+} SkidSteeringVariables;
+
+void reset_odometry_to_init(){
+    odometry_values.x = INIT_POSITION_X;
+    odometry_values.y = INIT_POSITION_Y;
+    odometry_values.theta = INIT_POSITION_THETA;
+}
+
+void reset_odometry_to_pose(){}
+
+void SkidSteeringOdometry
+
+
+
+
+
