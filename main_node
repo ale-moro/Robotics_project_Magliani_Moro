@@ -44,6 +44,7 @@
     double v_x;
     double v_y;
     double omega;
+    double steer;
     double v_r;
     double v_l;
 } OdometryValues;
@@ -53,16 +54,59 @@
     double omega_l;
 } SkidSteeringVariables;
 
+//Service for reset the odometry to initial pose
 void reset_odometry_to_init(){
     odometry_values.x = INIT_POSITION_X;
     odometry_values.y = INIT_POSITION_Y;
     odometry_values.theta = INIT_POSITION_THETA;
 }
 
+//Service for reset the odometry to pose(x,y,theta)
 void reset_odometry_to_pose(){}
 
-void SkidSteeringOdometry
+void Euler_Approximation(double sample_time, double speed_r, double speed_l, double steer, OdometryValues& approximate_values){
 
+    double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
+    double angular_velocity = odometry_values.omega;
+    double delta_theta = angular_velocity * sample_time;
+    
+    new_odometry_data.theta = last_odometry_data.theta + delta_theta;
+
+    approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
+    approximate_values.y = odometry_values.y + linear_velocity * sample_time * sen(odometry_values.theta);
+
+    approximate_values.omega = (speed_r - speed_l)/ BASELINE;
+
+    approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
+    approximate_values.v_y = ((speed_r - speed_l)/2) * sen(approximate_values.theta);
+
+    approximate_values.steer = steer;
+    approximate_values.v_r = speed_r;
+    approximate_values.v_l = speed_l;
+
+}
+
+void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_l, double steer, OdometryValues& approximate_values){
+
+    double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
+    double angular_velocity = odometry_values.omega;
+    double delta_theta = angular_velocity * sample_time;
+    
+    new_odometry_data.theta = last_odometry_data.theta + delta_theta;
+
+    approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
+    approximate_values.y = odometry_values.y + linear_velocity * sample_time * sen(odometry_values.theta + (angular_velocity * sample_time)/2);
+
+    approximate_values.omega = (speed_r - speed_l)/ BASELINE;
+
+    approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
+    approximate_values.v_y = ((speed_r - speed_l)/2) * sen(approximate_values.theta);
+
+    approximate_values.steer = steer;
+    approximate_values.v_r = speed_r;
+    approximate_values.v_l = speed_l;
+
+}
 
 
 
