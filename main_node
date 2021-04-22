@@ -35,6 +35,10 @@
 #define EULER_APPROXIMATION true
 #define RUNGE_KUTTA_APPROXIMATION false
 
+//Topic/Frame Description
+#define FRAME_ID "world"
+
+
 //Struct for odometry pose
 #typedef struct odometry_values{
     double x;
@@ -53,6 +57,10 @@
     double omega_r;
     double omega_l;
 } SkidSteeringVariables;
+
+odometry::parametersConfig last_config;
+OdometryValues odometry_values;
+double last_msg_time;
 
 //Service for reset the odometry to initial pose
 void reset_odometry_to_init(){
@@ -108,6 +116,71 @@ void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_
 
 }
 
+navmsg::Odometry setOdometry(){
+
+    nav_msg::Odometry odometry;
+    odometry.header.stamp = ros::Time::now();
+    odometry.header.frame_id = FRAME_ID;
+
+    odometry.pose.pose.position.x = odometry_values.x;
+    odometry.pose.pose.position.y = odometry_values.y;
+    odometry.pose.pose.position.z = 0.0;
+    odometry.pose.pose.orientation = tf::createQuaternionMsgFromYaw(odometry_values.theta);
+
+    odometry.twist.twist.velocity.left = odometry_values.v_l;
+    odometry.twist.twist.velocity.right = odometry_values.v_r;
+
+    return odometry;
+}
+
+geometry_msgs::TransformStamped odometryTransformation(){
+
+    geometry_msgs::TransformStamped transformation;
+    transformation.header.stamp = ros::Time::now();
+    transformation.header.frame_id = FRAME_ID;
+    //CHILD=???
+
+    //transformation.transform.translation.x = odometry_values.x;
+    //transformation.transform.translation.y = odometry_values.y;
+    //transformation.transform.translation.z = 0.0;
+    //odometry.pose.pose.position.orientation = tf::createQuaternionMsgFromYaw(odometry_values.theta);
+
+    return transformation;
+}
+
+//odometry::CustomOdometry populateCustomOdometry per associare ad ogni odometry l'approssimazione scelta dall'utente
 
 
+void subCallback(const odometry::floatStamped::Const& left, const odometry::floatStamped::Const& right,
+const odometry::floatStamped::Const& steer, ...){
+    string odometryModel;
+    OdometryValues new_odometry_values;
+    if(last_config.odometry_model_mode == EULER_APPROXIMATION){
+        Euler_Approximation(delta_time, left->data, right->data, steer->data, new_odometry_values);
+        odometryModel = "Euler Approximation";
+    } else if(last_config.odometry_model_mode == RUNGE_KUTTA_APPROXIMATION){
+        Runge_Kutta_Approximation(delta_time, left->data, right->data, steer->data, new_odometry_values);
+        odometryModel = "Runge Kutta Approximation";
+    } else {
+        ROS_INFO("ERROR CONFIG!");
+    }
 
+    odometry_values = new_odometry_values;
+}
+
+int main(int argc, char *argv[]){
+
+    ros::init(argc,argv,"main_node");
+    ros::NodeHandle n;
+
+    //initialization
+    reset_odometry_to_init();
+
+    odometry_values.v_r = INIT_VELOCITY_RIGHT;
+    odometry_values.v_l = INIT_VELOCITY_LEFT;
+    odometry_values.v_x = INIT_VELOCITY_X;
+    odometry_values.v_y = INIT_VELOCITY_Y;
+    odometry_values.omega = INIT_ANGULAR_VELOCITY;
+    
+
+}
