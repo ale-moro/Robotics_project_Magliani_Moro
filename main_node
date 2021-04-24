@@ -37,7 +37,7 @@
 
 //Topic/Frame Description
 #define FRAME_ID "world"
-
+#define CHILD_FRAME_ID "base_link"
 
 //Struct for odometry pose
 #typedef struct odometry_values{
@@ -58,7 +58,7 @@
     double omega_l;
 } SkidSteeringVariables;
 
-odometry::parametersConfig last_config;
+odometry::parametersConfig last_config; //cazzo ti fa?
 OdometryValues odometry_values;
 double last_msg_time;
 
@@ -70,15 +70,18 @@ void reset_odometry_to_init(){
 }
 
 //Service for reset the odometry to pose(x,y,theta)
-void reset_odometry_to_pose(){}
+void reset_odometry_to_pose(){
 
-void Euler_Approximation(double sample_time, double speed_r, double speed_l, double steer, OdometryValues& approximate_values){
+    
+}
+
+void Euler_Approximation(double sample_time, double speed_r, double speed_l, OdometryValues& approximate_values){
 
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
     double angular_velocity = odometry_values.omega;
     double delta_theta = angular_velocity * sample_time;
     
-    new_odometry_data.theta = last_odometry_data.theta + delta_theta;
+    approximate_values.theta = odometry_values.theta + delta_theta;
 
     approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
     approximate_values.y = odometry_values.y + linear_velocity * sample_time * sen(odometry_values.theta);
@@ -88,19 +91,21 @@ void Euler_Approximation(double sample_time, double speed_r, double speed_l, dou
     approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
     approximate_values.v_y = ((speed_r - speed_l)/2) * sen(approximate_values.theta);
 
-    approximate_values.steer = steer;
     approximate_values.v_r = speed_r;
     approximate_values.v_l = speed_l;
 
 }
 
-void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_l, double steer, OdometryValues& approximate_values){
+void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_l, OdometryValues& approximate_values){
 
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
     double angular_velocity = odometry_values.omega;
     double delta_theta = angular_velocity * sample_time;
     
-    new_odometry_data.theta = last_odometry_data.theta + delta_theta;
+    omega_z = (-v_l+v_r)/
+    apparent_baseline = (v_x - omega_l*RADIUS)/omega_z;
+
+    approximate_values.theta = odometry_values.theta + delta_theta;
 
     approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
     approximate_values.y = odometry_values.y + linear_velocity * sample_time * sen(odometry_values.theta + (angular_velocity * sample_time)/2);
@@ -110,7 +115,6 @@ void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_
     approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
     approximate_values.v_y = ((speed_r - speed_l)/2) * sen(approximate_values.theta);
 
-    approximate_values.steer = steer;
     approximate_values.v_r = speed_r;
     approximate_values.v_l = speed_l;
 
@@ -133,28 +137,22 @@ navmsg::Odometry setOdometry(){
     return odometry;
 }
 
-geometry_msgs::TransformStamped odometryTransformation(){
+//per associare ad ogni odometry l'approssimazione scelta dall'utente
+odometry::CustomOdometry customOdometry(nav_msgs::Odometry odometry, string approxMode){
 
-    geometry_msgs::TransformStamped transformation;
-    transformation.header.stamp = ros::Time::now();
-    transformation.header.frame_id = FRAME_ID;
-    //CHILD=???
+    odometry::CustomOdometry customOdometry;
+    customOdometry.odometry = odometry;
 
-    //transformation.transform.translation.x = odometry_values.x;
-    //transformation.transform.translation.y = odometry_values.y;
-    //transformation.transform.translation.z = 0.0;
-    //odometry.pose.pose.position.orientation = tf::createQuaternionMsgFromYaw(odometry_values.theta);
+    customOdometry.odometryMode.data = approxMode;
 
-    return transformation;
+    return customOdometry;
 }
 
-//odometry::CustomOdometry populateCustomOdometry per associare ad ogni odometry l'approssimazione scelta dall'utente
-
-
-void subCallback(const odometry::floatStamped::Const& left, const odometry::floatStamped::Const& right,
-const odometry::floatStamped::Const& steer, ...){
+void subCallback(const odometry::floatStamped::Const& left, const odometry::floatStamped::Const& right, tf::TransformBroadcaster& broadcaster, ros::Publisher& publisherOdometry, ros::Publisher& publisherCustomOdometry){
+   
     string odometryModel;
     OdometryValues new_odometry_values;
+
     if(last_config.odometry_model_mode == EULER_APPROXIMATION){
         Euler_Approximation(delta_time, left->data, right->data, steer->data, new_odometry_values);
         odometryModel = "Euler Approximation";
