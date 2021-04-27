@@ -70,9 +70,10 @@ void reset_odometry_to_init(){
 }
 
 //Service for reset the odometry to pose(x,y,theta)
-void reset_odometry_to_pose(){
-
-    
+void reset_odometry_to_pose(double x, double y, double theta){
+    odometry_values.x = x;
+    odometry_values.y = y;
+    odometry_values.theta = theta;
 }
 
 void Euler_Approximation(double sample_time, double speed_r, double speed_l, OdometryValues& approximate_values){
@@ -80,13 +81,18 @@ void Euler_Approximation(double sample_time, double speed_r, double speed_l, Odo
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
     double angular_velocity = odometry_values.omega;
     double delta_theta = angular_velocity * sample_time;
-    
+
+   
+    double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
+    double y0 = RADIUS/Lambda;
+    double apparent_baseline = 2y0;
+
     approximate_values.theta = odometry_values.theta + delta_theta;
 
     approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
     approximate_values.y = odometry_values.y + linear_velocity * sample_time * sen(odometry_values.theta);
 
-    approximate_values.omega = (speed_r - speed_l)/ BASELINE;
+    approximate_values.omega = (speed_r - speed_l)/ apparent_baseline;
 
     approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
     approximate_values.v_y = ((speed_r - speed_l)/2) * sen(approximate_values.theta);
@@ -101,16 +107,18 @@ void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
     double angular_velocity = odometry_values.omega;
     double delta_theta = angular_velocity * sample_time;
+
     
-    omega_z = (-v_l+v_r)/
-    apparent_baseline = (v_x - omega_l*RADIUS)/omega_z;
+    double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
+    double y0 = RADIUS/Lambda;
+    double apparent_baseline = 2y0;
 
     approximate_values.theta = odometry_values.theta + delta_theta;
 
     approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
     approximate_values.y = odometry_values.y + linear_velocity * sample_time * sen(odometry_values.theta + (angular_velocity * sample_time)/2);
 
-    approximate_values.omega = (speed_r - speed_l)/ BASELINE;
+    approximate_values.omega = (speed_r - speed_l)/ apparent_baseline;
 
     approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
     approximate_values.v_y = ((speed_r - speed_l)/2) * sen(approximate_values.theta);
@@ -131,6 +139,7 @@ navmsg::Odometry setOdometry(){
     odometry.pose.pose.position.z = 0.0;
     odometry.pose.pose.orientation = tf::createQuaternionMsgFromYaw(odometry_values.theta);
 
+    odometry.child_frame_id = CHILD_FRAME_ID;
     odometry.twist.twist.velocity.left = odometry_values.v_l;
     odometry.twist.twist.velocity.right = odometry_values.v_r;
 
@@ -154,10 +163,10 @@ void subCallback(const odometry::floatStamped::Const& left, const odometry::floa
     OdometryValues new_odometry_values;
 
     if(last_config.odometry_model_mode == EULER_APPROXIMATION){
-        Euler_Approximation(delta_time, left->data, right->data, steer->data, new_odometry_values);
+        Euler_Approximation(delta_time, right->data, left->data, new_odometry_values);
         odometryModel = "Euler Approximation";
     } else if(last_config.odometry_model_mode == RUNGE_KUTTA_APPROXIMATION){
-        Runge_Kutta_Approximation(delta_time, left->data, right->data, steer->data, new_odometry_values);
+        Runge_Kutta_Approximation(delta_time, right->data, left->data, new_odometry_values);
         odometryModel = "Runge Kutta Approximation";
     } else {
         ROS_INFO("ERROR CONFIG!");
@@ -179,6 +188,8 @@ int main(int argc, char *argv[]){
     odometry_values.v_x = INIT_VELOCITY_X;
     odometry_values.v_y = INIT_VELOCITY_Y;
     odometry_values.omega = INIT_ANGULAR_VELOCITY;
+
+    
     
 
 }
