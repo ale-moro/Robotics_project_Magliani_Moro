@@ -38,6 +38,8 @@
 //Topic/Frame Description
 #define FRAME_ID "world"
 #define CHILD_FRAME_ID "base_link"
+#define TOPIC_ID "odometry"
+#define CUSTOM_TOPIC_ID "customOdometry"
 
 //Struct for odometry pose
 #typedef struct odometry_values{
@@ -58,9 +60,27 @@
     double omega_l;
 } SkidSteeringVariables;
 
-odometry::parametersConfig last_config; //cazzo ti fa?
+odometry::parametersConfig last_config;
 OdometryValues odometry_values;
 double last_msg_time;
+
+
+void configModeCallback(odometry::parametersConfig &config, uint32_t level){
+    if(config.odometry_model_mode!=last_config.odometry_model_mode) {
+       ROS_INFO("Approximation changed: changing odometry model to: \t%s", config.odometry_model_mode?"Runge Kutta":"Euler");
+       last_config.odometry_model_mode = config.odometry_model_mode; 
+    } 
+    if(config.odometry_set_position){
+        ROS_INFO("Position changed: setting position to: \t(X: %f, Y: %f)", config.odometry_x_position, config.odometry_y_position);
+        odometry_values.x = config.odometry_x_position;
+        odometry_values.y = config.odometry_y_position;
+    } else if(config.odometry_reset_default){
+        ROS_INFO("Position changed: setting position to: \t(X: %f, Y: %f)", INIT_POSITION_X,INIT_POSITION_Y);
+        reset_odometry_to_init();
+    }
+     
+}
+
 
 //Service for reset the odometry to initial pose
 void reset_odometry_to_init(){
@@ -128,9 +148,9 @@ void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_
 
 }
 
-navmsg::Odometry setOdometry(){
+nav_msgs::Odometry setOdometry(){
 
-    nav_msg::Odometry odometry;
+    nav_msgs::Odometry odometry;
     odometry.header.stamp = ros::Time::now();
     odometry.header.frame_id = FRAME_ID;
 
@@ -188,6 +208,19 @@ int main(int argc, char *argv[]){
     odometry_values.v_x = INIT_VELOCITY_X;
     odometry_values.v_y = INIT_VELOCITY_Y;
     odometry_values.omega = INIT_ANGULAR_VELOCITY;
+    last_msg_time = ros::Time::now().toSec();
+
+    dynamic_reconfigure::Server<odometry::parametersConfig> config_server;
+    config_server.setCallback(boost::bind(&configModeCallback, _1, _2));
+
+    tf::TransformBroadcaster odom_broadcaster;
+    ros::Publisher odometry_publisher = n.advertise<nav_msgs::Odometry>(TOPIC_ID, 25);
+    ros::Publisher custom_odometry_publisher = n.advertise<nav_msgs::CustomOdometry>(CUSTOM_TOPIC_ID, 25);
+
+    ROS_INFO("NODE STARTED\n");
+
+    message_filters::Subscriber<odometry::floatStamped> left_velocity_sub(n, "LEFT_VELOCITY", 1);
+     message_filters::Subscriber<odometry::floatStamped> right_velocity_sub(n, "RIGHT_VELOCITY", 1);
 
     
     
