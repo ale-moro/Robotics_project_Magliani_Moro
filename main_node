@@ -177,6 +177,22 @@ odometry::CustomOdometry customOdometry(nav_msgs::Odometry odometry, string appr
     return customOdometry;
 }
 
+geometry_msgs::TransfromStamped setTransform(){
+    
+    geometry_msgs::TransformStamped odomtransform;
+    odomtransform.header.stamp = ros::Time::now();
+    odomtransform.header.frame_id = FRAME_ID;
+    odomtransform.header.child_frame_id = CHILD_FRAME_ID;
+
+    odomtransform.transform.traslation_x = odometry_values.x;
+    odomtransform.transform.traslation_y = odometry_values.y;
+    odomtransform.transform.traslation_z = 0.0;
+    odomtransform.transform.rotation = tf::createQuaternionMsgFromYaw(odometry_values.theta);
+
+    return odomtransform;
+
+}
+
 void subCallback(const odometry::floatStamped::Const& left, const odometry::floatStamped::Const& right, tf::TransformBroadcaster& broadcaster, ros::Publisher& publisherOdometry, ros::Publisher& publisherCustomOdometry){
    
     string odometryModel;
@@ -193,6 +209,15 @@ void subCallback(const odometry::floatStamped::Const& left, const odometry::floa
     }
 
     odometry_values = new_odometry_values;
+
+    nav_msgs::Odometry odometry = setOdometry();
+    publisherOdometry.publish(odometry);
+
+    geometry_msgs::TransformStamped transform = populateTransform();
+    broadcaster.sendTransform(transform);
+
+    odometry::CustomOdometry customOdometry = populateCustomOdometry(odometry, odometryModel);
+    publisherCustomOdometry.publish(customOdometry);
 }
 
 int main(int argc, char *argv[]){
@@ -214,15 +239,25 @@ int main(int argc, char *argv[]){
     config_server.setCallback(boost::bind(&configModeCallback, _1, _2));
 
     tf::TransformBroadcaster odom_broadcaster;
-    ros::Publisher odometry_publisher = n.advertise<nav_msgs::Odometry>(TOPIC_ID, 25);
-    ros::Publisher custom_odometry_publisher = n.advertise<nav_msgs::CustomOdometry>(CUSTOM_TOPIC_ID, 25);
+    ros::Publisher odom_publisher = n.advertise<nav_msgs::Odometry>(TOPIC_ID, 25);
+    ros::Publisher custom_odom_publisher = n.advertise<nav_msgs::CustomOdometry>(CUSTOM_TOPIC_ID, 25);
 
     ROS_INFO("NODE STARTED\n");
 
     message_filters::Subscriber<odometry::floatStamped> left_velocity_sub(n, "LEFT_VELOCITY", 1);
-     message_filters::Subscriber<odometry::floatStamped> right_velocity_sub(n, "RIGHT_VELOCITY", 1);
+    message_filters::Subscriber<odometry::floatStamped> right_velocity_sub(n, "RIGHT_VELOCITY", 1);
 
-    
-    
+    typedef message_filters::sync_policies::Approximate_Time<odometry::floatStamped, odometry::floatStamped> syncPolicy;
+
+    ROS_INFO("SUBSCRIBER BUILT\n");
+    message_filters::Synchronizer<syncPolicy> sync(syncPolicy(10), left_speed_sub, right_speed_sub);
+    ROS_INFO("SYNCHRONIZER STARTED\n");
+    sync.registerCallback(boost::bind(&subCallback, _1, _2, odom_broadcaster, odom_publisher, custom_odom_publisher));
+    ROS_INFO("TOPICS SYNCHRONIZED\n");
+    // ### END ###
+
+    ROS_INFO("NODE RUNNING.....\n");
+    ros::spin();
+    return 0;
 
 }
