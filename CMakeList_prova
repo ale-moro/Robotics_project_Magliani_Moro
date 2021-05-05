@@ -7,19 +7,10 @@ project(pub_sub)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  nav_msgs
-  message_generation
-  message_filters
-  dynamic_reconfigure
-  tf
-)
+# find_package(catkin REQUIRED COMPONENTS roscpp message_generation message_filters
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -50,12 +41,22 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  nav_msgs
+  message_generation
+  message_filters
+  dynamic_reconfigure
+  tf
+)
+
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   floatStamped.msg
-#   CustomOdometry.msg
-# )
+add_message_files(
+   FILES
+   floatStamped.msg
+   CustomOdometry.msg
+ )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -72,11 +73,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-#   nav_msgs
-# )
+generate_messages(
+   DEPENDENCIES
+   std_msgs
+   nav_msgs
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -93,9 +94,9 @@ find_package(catkin REQUIRED COMPONENTS
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/parameters.cfg
-# )
+generate_dynamic_reconfigure_options(
+   cfg/parameters.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -107,9 +108,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  CATKIN_DEPENDS 
-#  message_runtime
-#  message_filters
+  CATKIN_DEPENDS 
+  message_runtime
+  message_filters
 #  INCLUDE_DIRS include
 #  LIBRARIES pub_sub
 #  CATKIN_DEPENDS roscpp rospy std_msgs
@@ -122,9 +123,10 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
+
 include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+ include
+ ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -214,8 +216,10 @@ include_directories(
 
  add_executable(main_node
   src/main_node.cpp
-  )
+ )
+ 
  add_dependencies(main_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
+ 
  target_link_libraries(main_node
  ${catkin_LIBRARIES}
  )
