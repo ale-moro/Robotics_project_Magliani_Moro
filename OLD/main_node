@@ -66,19 +66,18 @@ double last_msg_time;
 
 
 void configModeCallback(odometry::parametersConfig &config, uint32_t level){
-    if(config.odometry_model_mode!=last_config.odometry_model_mode) {
-       ROS_INFO("Approximation changed: changing odometry model to: \t%s", config.odometry_model_mode?"Runge Kutta":"Euler");
-       last_config.odometry_model_mode = config.odometry_model_mode; 
+    if(config.approximation_model_mode!=last_config.approximation_model_mode) {
+       ROS_INFO("Approximation changed: changing odometry model to: \t%s", config.approximation_model_mode?"Runge Kutta":"Euler");
+       last_config.approximation_model_mode = config.approximation_model_mode; 
     } 
-    if(config.odometry_set_position){
-        ROS_INFO("Position changed: setting position to: \t(X: %f, Y: %f)", config.odometry_x_position, config.odometry_y_position);
-        odometry_values.x = config.odometry_x_position;
-        odometry_values.y = config.odometry_y_position;
-    } else if(config.odometry_reset_default){
+    if(config.approximation_set_position){
+        ROS_INFO("Position changed: setting position to: \t(X: %f, Y: %f)", config.approximation_x_position, config.approximation_y_position);
+        approximation_values.x = config.approximation_x_position;
+        approximation_values.y = config.approximation_y_position;
+    } else if(config.approximation_reset_default){
         ROS_INFO("Position changed: setting position to: \t(X: %f, Y: %f)", INIT_POSITION_X,INIT_POSITION_Y);
         reset_odometry_to_init();
     }
-     
 }
 
 
