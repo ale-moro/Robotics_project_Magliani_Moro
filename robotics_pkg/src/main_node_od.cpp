@@ -1,5 +1,5 @@
 #include "ros/ros.h" 
-#include "std_msgs/String.h"
+#include <std_msgs/String.h>
 #include <sstream>
 #include <nav_msgs/Odometry.h>
 #include "robotics_pkg/customOdometry.h"
@@ -12,6 +12,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/connection.h>
 #include <message_filters/sync_policies/approximate_time.h>
+
 
 //Topic/Frame Description
 #define FRAME_ID "world"
@@ -59,9 +60,6 @@ robotics_pkg::parametersConfig last_config;
 OdometryValues odometry_values;
 double last_msg_time;
 
-void configCallBack(robotics_pkg::parametersConfig &config, uint32_t level){
-	//capire dove viene inizializzata odometry_model_mode da andrea finazzi ed inizializzarla
-}
 
 //Service for reset the odometry to initial pose
 void reset_odometry_to_init(){
@@ -69,6 +67,23 @@ void reset_odometry_to_init(){
     odometry_values.y = INIT_POSITION_Y;
     odometry_values.theta = INIT_POSITION_THETA;
 }
+
+void configCallBack(robotics_pkg::parametersConfig &config, uint32_t level){
+
+	if(config.approximation_model_mode!=last_config.approximation_model_mode) {
+       ROS_INFO("Approximation changed: changing odometry model to: \t%s", config.approximation_model_mode?"Runge Kutta":"Euler");
+       last_config.approximation_model_mode = config.approximation_model_mode; 
+    } 
+    if(config.approximation_set_position){
+        ROS_INFO("Position changed: setting position to: \t(X: %f, Y: %f)", config.approximation_x_position, config.approximation_y_position);
+        odometry_values.x = config.approximation_x_position;
+        odometry_values.y = config.approximation_y_position;
+    } else if(config.approximation_reset_default){
+        ROS_INFO("Position changed: setting position to: \t(X: %f, Y: %f)", INIT_POSITION_X,INIT_POSITION_Y);
+        reset_odometry_to_init();
+    }
+}
+
 
 //Service for reset the odometry to pose(x,y,theta)
 void reset_odometry_to_pose(double x, double y, double theta){
@@ -142,26 +157,20 @@ nav_msgs::Odometry setOdometry(){
 
     odometry.child_frame_id = CHILD_FRAME_ID;
     
-    //vedere inizializzazione "linear" andrea finazzi per inizializzare velocity
-    //odometry.twist.twist.velocity.left = odometry_values.v_l;
-    //odometry.twist.twist.velocity.right = odometry_values.v_r;
+    odometry.twist.twist.linear.x = odometry_values.v_x;
+    odometry.twist.twist.linear.y = odometry_values.v_y;
+    odometry.twist.twist.angular.z = odometry_values.omega;
 
     return odometry;
 }
 
 //per associare ad ogni odometry l'approssimazione scelta dall'utente
-robotics_pkg::customOdometry customOdometry(nav_msgs::Odometry odometry){
+robotics_pkg::customOdometry customOdometry(nav_msgs::Odometry odometry, std_msgs::String approximation_model){
 
-
-	//NB: AGGIUNGERE 'STRING APPROXYMODE' IN INGRESSO 
     
     robotics_pkg::customOdometry customOdometry;
-    
-    //cercare inizializzazione odometry
-    //customOdometry.odometry = odometry;
-
-    //cercare inizializzazione odometryMode
-    //customOdometry.odometryMode.data = approxMode;
+    customOdometry.odometry = odometry;
+	customOdometry.approxMode = approximation_model;
 
     return customOdometry;
 }
@@ -172,13 +181,13 @@ geometry_msgs::TransformStamped setTransform(){
     odomtransform.header.stamp = ros::Time::now();
     odomtransform.header.frame_id = FRAME_ID;
     
-    //vedere inizializzazione "child_frame_id" e "translation_x" e "translation_y" su andrea finazzi
+    //vedere inizializzazione "child_frame_id" 
     //odomtransform.header.child_frame_id = CHILD_FRAME_ID;
 
-    //odomtransform.transform.traslation_x = odometry_values.x;
-    //odomtransform.transform.traslation_y = odometry_values.y;
-    //odomtransform.transform.traslation_z = 0.0;
-    //odomtransform.transform.rotation = tf::createQuaternionMsgFromYaw(odometry_values.theta);
+    odomtransform.transform.translation.x = odometry_values.x;
+    odomtransform.transform.translation.y = odometry_values.y;
+    odomtransform.transform.translation.z = 0.0;
+    odomtransform.transform.rotation = tf::createQuaternionMsgFromYaw(odometry_values.theta);
 
     return odomtransform;
 
