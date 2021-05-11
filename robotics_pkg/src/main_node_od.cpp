@@ -199,11 +199,18 @@ int main(int argc, char **argv){
 	ros::init(argc,argv, "main_node_eseg");
 	ros::NodeHandle n;
 
+	odometry_values.v_r = INIT_VELOCITY_RIGHT;
+    odometry_values.v_l = INIT_VELOCITY_LEFT;
+    odometry_values.v_x = INIT_VELOCITY_X;
+    odometry_values.v_y = INIT_VELOCITY_Y;
+    odometry_values.omega = INIT_ANGULAR_VELOCITY;
+    last_msg_time = ros::Time::now().toSec();
+
 	//publisher creation
 	ros::Publisher odom_publisher = n.advertise<nav_msgs::Odometry>(TOPIC_ID,1000);
     ros::Publisher cust_odom_publisher = n.advertise<robotics_pkg::customOdometry>(CUSTOM_TOPIC_ID,1000);
    
-    //dynamica reconfigure
+    //dynamic reconfigure
     dynamic_reconfigure::Server<robotics_pkg::parametersConfig> server;
     server.setCallback(boost::bind(&configCallBack, _1, _2));
 
@@ -215,7 +222,11 @@ int main(int argc, char **argv){
     message_filters::Subscriber<robotics_pkg::floatStamped> right_velocity_sub(n, "RIGHT_VELOCITY", 1);
     typedef message_filters::sync_policies::ApproximateTime<robotics_pkg::floatStamped, robotics_pkg::floatStamped> SyncPolicy;
 
-
+    ROS_INFO("SUBSCRIBER BUILT\n");
+    message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), left_velocity_sub, right_velocity_sub);
+    ROS_INFO("SYNCHRONIZER STARTED\n");
+    sync.registerCallback(boost::bind(&subCallback, _1, _2, odom_broadcaster, odom_publisher, cust_odom_publisher));
+    ROS_INFO("TOPICS SYNCHRONIZED\n");
 
 
     ros::spin();
