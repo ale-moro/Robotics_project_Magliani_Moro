@@ -3,7 +3,7 @@
 #include <sstream>
 #include <nav_msgs/Odometry.h>
 #include "robotics_pkg/customOdometry.h"
-#include "robotics_pkg/floatStamped.h"
+#include "robotics_pkg/MotorSpeed.h"
 #include <dynamic_reconfigure/server.h>
 #include <robotics_pkg/parametersConfig.h>
 #include <boost/bind.hpp>
@@ -37,6 +37,7 @@
 //Approximation choice
 #define EULER_APPROXIMATION true
 #define RUNGE_KUTTA_APPROXIMATION false
+#define LENGHT 26
 
 //Struct for odometry pose
 typedef struct odometry_values{
@@ -193,6 +194,35 @@ geometry_msgs::TransformStamped setTransform(){
 
 }
 
+void subCallback(const robotics_pkg::MotorSpeed::ConstPtr& left, const robotics_pkg::MotorSpeed::ConstPtr& right, tf::TransformBroadcaster& broadcaster, ros::Publisher& publisherOdometry, ros::Publisher& publisherCustomOdometry){
+
+    string(26) odometryModel;
+    double time = (left->header.stamp.toSec() + right->header.stamp.toSec()) / 2;
+    double delta_time = time - last_msg_time;
+    last_msg_time = time;
+    OdometryValues new_odometry_values;
+    if(last_config.approximation_model_mode == EULER_APPROXIMATION){
+        Euler_Approximation(delta_time, right->rpm, left->rpm, new_odometry_values);
+        odometryModel = "Euler Approximation";
+    } else if(last_config.approximation_model_mode == RUNGE_KUTTA_APPROXIMATION){
+        Runge_Kutta_Approximation(delta_time, right->rpm, left->rpm, new_odometry_values);
+        odometryModel = "Runge Kutta Approximation";
+    } else {
+        ROS_INFO("ERROR CONFIG!");
+    }
+    
+    odometry_values = new_odometry_values;
+
+    nav_msgs::Odometry odometry = setOdometry();
+    publisherOdometry.publish(odometry);
+
+    geometry_msgs::TransformStamped transform = setTransform();
+    broadcaster.sendTransform(transform);
+
+    odometry::CustomOdometry customOdometry = customOdometry(odometry, odometryModel);
+    publisherCustomOdometry.publish(customOdometry);
+}
+
 int main(int argc, char **argv){
 
 	//initialization
@@ -218,14 +248,14 @@ int main(int argc, char **argv){
     tf::TransformBroadcaster odom_broadcaster;
 
     //message filters
-    message_filters::Subscriber<robotics_pkg::floatStamped> left_velocity_sub(n, "LEFT_VELOCITY", 1);
-    message_filters::Subscriber<robotics_pkg::floatStamped> right_velocity_sub(n, "RIGHT_VELOCITY", 1);
-    typedef message_filters::sync_policies::ApproximateTime<robotics_pkg::floatStamped, robotics_pkg::floatStamped> SyncPolicy;
+    message_filters::Subscriber<robotics_pkg::MotorSpeed> left_velocity_sub(n, "LEFT_VELOCITY", 1);
+    message_filters::Subscriber<robotics_pkg::MotorSpeed> right_velocity_sub(n, "RIGHT_VELOCITY", 1);
+    typedef message_filters::sync_policies::ApproximateTime<robotics_pkg::MotorSpeed, robotics_pkg::MotorSpeed> SyncPolicy;
 
     ROS_INFO("SUBSCRIBER BUILT\n");
     message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), left_velocity_sub, right_velocity_sub);
     ROS_INFO("SYNCHRONIZER STARTED\n");
-    sync.registerCallback(boost::bind(&subCallback, _1, _2, odom_broadcaster, odom_publisher, cust_odom_publisher));
+    sync.registerCallback(boost::bind(&subCallback, _1, _2, odom_publisher, odom_broadcaster, cust_odom_publisher));
     ROS_INFO("TOPICS SYNCHRONIZED\n");
 
 
