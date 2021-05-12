@@ -196,17 +196,19 @@ geometry_msgs::TransformStamped setTransform(){
 
 void subCallback(const robotics_pkg::MotorSpeed::ConstPtr& left, const robotics_pkg::MotorSpeed::ConstPtr& right, tf::TransformBroadcaster& broadcaster, ros::Publisher& publisherOdometry, ros::Publisher& publisherCustomOdometry){
 
-    string(26) odometryModel;
+	std_msgs::String message;
     double time = (left->header.stamp.toSec() + right->header.stamp.toSec()) / 2;
     double delta_time = time - last_msg_time;
     last_msg_time = time;
     OdometryValues new_odometry_values;
     if(last_config.approximation_model_mode == EULER_APPROXIMATION){
         Euler_Approximation(delta_time, right->rpm, left->rpm, new_odometry_values);
-        odometryModel = "Euler Approximation";
+        char odometryModel[20] = "Euler Approximation";
+        message.data = odometryModel;
     } else if(last_config.approximation_model_mode == RUNGE_KUTTA_APPROXIMATION){
         Runge_Kutta_Approximation(delta_time, right->rpm, left->rpm, new_odometry_values);
-        odometryModel = "Runge Kutta Approximation";
+        char odometryModel[26] = "Runge Kutta Approximation";
+        message.data = odometryModel;
     } else {
         ROS_INFO("ERROR CONFIG!");
     }
@@ -219,8 +221,8 @@ void subCallback(const robotics_pkg::MotorSpeed::ConstPtr& left, const robotics_
     geometry_msgs::TransformStamped transform = setTransform();
     broadcaster.sendTransform(transform);
 
-    odometry::CustomOdometry customOdometry = customOdometry(odometry, odometryModel);
-    publisherCustomOdometry.publish(customOdometry);
+    robotics_pkg::customOdometry custom_Odometry = customOdometry(odometry, message);
+    publisherCustomOdometry.publish(custom_Odometry);
 }
 
 int main(int argc, char **argv){
@@ -255,7 +257,7 @@ int main(int argc, char **argv){
     ROS_INFO("SUBSCRIBER BUILT\n");
     message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), left_velocity_sub, right_velocity_sub);
     ROS_INFO("SYNCHRONIZER STARTED\n");
-    sync.registerCallback(boost::bind(&subCallback, _1, _2, odom_publisher, odom_broadcaster, cust_odom_publisher));
+    sync.registerCallback(boost::bind(&subCallback, _1, _2, odom_broadcaster, odom_publisher, cust_odom_publisher));
     ROS_INFO("TOPICS SYNCHRONIZED\n");
 
 
