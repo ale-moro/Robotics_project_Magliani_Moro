@@ -55,7 +55,7 @@ find_package(catkin REQUIRED COMPONENTS
  add_message_files(
    FILES
    customOdometry.msg
-   floatStamped.msg
+   MotorSpeed.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -215,9 +215,9 @@ target_link_libraries(main_node_eseg ${catkin_LIBRARIES})
 
 add_dependencies(main_node_eseg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-##add_executable(sub_eseg src/sub.cpp)
+add_executable(sub_eseg src/sub.cpp)
 
-##target_link_libraries(sub_eseg ${catkin_LIBRARIES})
+target_link_libraries(sub_eseg ${catkin_LIBRARIES})
 
-##add_dependencies(sub_eseg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(sub_eseg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
