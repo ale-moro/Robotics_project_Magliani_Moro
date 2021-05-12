@@ -1,9 +1,8 @@
-
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include <nav_msgs/Odometry.h>
 #include "robotics_pkg/customOdometry.h"
-
+#include <boost/function.hpp>
 
 typedef struct odometry_values{
     double x;
@@ -21,7 +20,8 @@ typedef struct odometry_values{
 void Callback(const nav_msgs::Odometry::ConstPtr& msg){
 
 
-    ROS_INFO("I heard: [%d, %d]", msg->Odometry);
+    //ROS_INFO("I heard: [%d]", msg->twist.twist.angular.z);
+	ROS_INFO("I heard");
 	
   
 }
@@ -33,7 +33,3 @@ ros::NodeHandle n;
 
 ros::Subscriber sub = n.subscribe("Odometry",1000,Callback);
 ros::spin();
-return 0;
-
-
-}
