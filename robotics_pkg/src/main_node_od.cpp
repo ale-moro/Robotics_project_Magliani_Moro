@@ -40,6 +40,7 @@
 //Approximation choice
 #define EULER_APPROXIMATION true
 #define RUNGE_KUTTA_APPROXIMATION false
+#define GEAR_RATIO 38.0
 #define LENGHT 26
 
 //Struct for odometry pose
@@ -67,8 +68,7 @@ double last_msg_time;
 
 //Service for reset the odometry to initial pose
 void reset_odometry_to_init(){
-
-	ROS_INFO("ENTRATO IN RESET_I");
+	
     odometry_values.x = INIT_POSITION_X;
     odometry_values.y = INIT_POSITION_Y;
     odometry_values.theta = INIT_POSITION_THETA;
@@ -94,8 +94,7 @@ void configCallBack(robotics_pkg::parametersConfig &config, uint32_t level){
 
 //Service for reset the odometry to pose(x,y,theta)
 void reset_odometry_to_pose(double x, double y, double theta){
-    
-	ROS_INFO("ENTRATO IN RESET_P");
+  
     odometry_values.x = x;
     odometry_values.y = y;
     odometry_values.theta = theta;
@@ -103,25 +102,25 @@ void reset_odometry_to_pose(double x, double y, double theta){
 
 void Euler_Approximation(double sample_time, double speed_r, double speed_l, OdometryValues& approximate_values){
 
-	ROS_INFO("ENTRATO IN E_APP");
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
-    double angular_velocity = odometry_values.omega;
+    double angular_velocity = (odometry_values.v_r + odometry_values.v_l) / APPARENT_BASELINE;
     double delta_theta = angular_velocity * sample_time;
 
-   
+	speed_r = speed_r/GEAR_RATIO;
+	speed_l = speed_l/GEAR_RATIO;
+	
     //double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
     //double y0 = RADIUS/Lambda;
     //double apparent_baseline = 2*y0;
-
+	
+    approximate_values.x += odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
+    approximate_values.y += odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta);
     approximate_values.theta = odometry_values.theta + delta_theta;
+	
+    approximate_values.omega = angular_velocity;
 
-    approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
-    approximate_values.y = odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta);
-
-    approximate_values.omega = (speed_r - speed_l)/ APPARENT_BASELINE;
-
-    approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
-    approximate_values.v_y = ((speed_r - speed_l)/2) * sin(approximate_values.theta);
+    approximate_values.v_x = (linear_velocity/2) * cos(approximate_values.theta);
+    approximate_values.v_y = (linear_velocity/2) * sin(approximate_values.theta);
 
     approximate_values.v_r = speed_r;
     approximate_values.v_l = speed_l;
@@ -130,11 +129,12 @@ void Euler_Approximation(double sample_time, double speed_r, double speed_l, Odo
 
 void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_l, OdometryValues& approximate_values){
 
-	ROS_INFO("ENTRATO IN RK_APP");
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
-    double angular_velocity = odometry_values.omega;
+    double angular_velocity = (odometry_values.v_r + odometry_values.v_l) / APPARENT_BASELINE;
     double delta_theta = angular_velocity * sample_time;
 
+	speed_r = speed_r/GEAR_RATIO;
+	speed_l = speed_l/GEAR_RATIO;
     
     //double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
     //double y0 = RADIUS/Lambda;
@@ -142,13 +142,13 @@ void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_
 
     approximate_values.theta = odometry_values.theta + delta_theta;
 
-    approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
-    approximate_values.y = odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta + (angular_velocity * sample_time)/2);
+    approximate_values.x += odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
+    approximate_values.y += odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta + (angular_velocity * sample_time)/2);
 
-    approximate_values.omega = (speed_r - speed_l)/ APPARENT_BASELINE;
+    approximate_values.omega = (speed_r - speed_l)/APPARENT_BASELINE;
 
-    approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
-    approximate_values.v_y = ((speed_r - speed_l)/2) * sin(approximate_values.theta);
+    approximate_values.v_x = (linear_velocity/2) * cos(approximate_values.theta);
+    approximate_values.v_y = (linear_velocity/2) * sin(approximate_values.theta);
 
     approximate_values.v_r = speed_r;
     approximate_values.v_l = speed_l;
