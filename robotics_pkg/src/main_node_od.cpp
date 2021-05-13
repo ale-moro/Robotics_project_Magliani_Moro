@@ -11,11 +11,13 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/connection.h>
+#include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <sensor_msgs/Image.h>
 
 
 //Topic/Frame Description
-#define FRAME_ID "world"
+#define FRAME_ID "odom"
 #define CHILD_FRAME_ID "base_link"
 #define TOPIC_ID "odometry"
 #define CUSTOM_TOPIC_ID "customOdometry"
@@ -23,6 +25,7 @@
 //Values given by the text
 #define BASELINE 0.583
 #define RADIUS 0.1575
+#define APPARENT_BASELINE 1.02
 
 //Default values given by the text
 #define INIT_POSITION_X 0.0
@@ -64,6 +67,8 @@ double last_msg_time;
 
 //Service for reset the odometry to initial pose
 void reset_odometry_to_init(){
+
+	ROS_INFO("ENTRATO IN RESET_I");
     odometry_values.x = INIT_POSITION_X;
     odometry_values.y = INIT_POSITION_Y;
     odometry_values.theta = INIT_POSITION_THETA;
@@ -71,6 +76,7 @@ void reset_odometry_to_init(){
 
 void configCallBack(robotics_pkg::parametersConfig &config, uint32_t level){
 
+	ROS_INFO("ENTRATO IN CONFIGCALLBACK");
 	if(config.approximation_model_mode!=last_config.approximation_model_mode) {
        ROS_INFO("Approximation changed: changing odometry model to: \t%s", config.approximation_model_mode?"Runge Kutta":"Euler");
        last_config.approximation_model_mode = config.approximation_model_mode; 
@@ -88,6 +94,8 @@ void configCallBack(robotics_pkg::parametersConfig &config, uint32_t level){
 
 //Service for reset the odometry to pose(x,y,theta)
 void reset_odometry_to_pose(double x, double y, double theta){
+    
+	ROS_INFO("ENTRATO IN RESET_P");
     odometry_values.x = x;
     odometry_values.y = y;
     odometry_values.theta = theta;
@@ -95,21 +103,22 @@ void reset_odometry_to_pose(double x, double y, double theta){
 
 void Euler_Approximation(double sample_time, double speed_r, double speed_l, OdometryValues& approximate_values){
 
+	ROS_INFO("ENTRATO IN E_APP");
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
     double angular_velocity = odometry_values.omega;
     double delta_theta = angular_velocity * sample_time;
 
    
-    double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
-    double y0 = RADIUS/Lambda;
-    double apparent_baseline = 2*y0;
+    //double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
+    //double y0 = RADIUS/Lambda;
+    //double apparent_baseline = 2*y0;
 
     approximate_values.theta = odometry_values.theta + delta_theta;
 
     approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
     approximate_values.y = odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta);
 
-    approximate_values.omega = (speed_r - speed_l)/ apparent_baseline;
+    approximate_values.omega = (speed_r - speed_l)/ APPARENT_BASELINE;
 
     approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
     approximate_values.v_y = ((speed_r - speed_l)/2) * sin(approximate_values.theta);
@@ -121,21 +130,22 @@ void Euler_Approximation(double sample_time, double speed_r, double speed_l, Odo
 
 void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_l, OdometryValues& approximate_values){
 
+	ROS_INFO("ENTRATO IN RK_APP");
     double linear_velocity = (odometry_values.v_r + odometry_values.v_l) / 2;
     double angular_velocity = odometry_values.omega;
     double delta_theta = angular_velocity * sample_time;
 
     
-    double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
-    double y0 = RADIUS/Lambda;
-    double apparent_baseline = 2*y0;
+    //double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
+    //double y0 = RADIUS/Lambda;
+    //double apparent_baseline = 2*y0;
 
     approximate_values.theta = odometry_values.theta + delta_theta;
 
     approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
     approximate_values.y = odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta + (angular_velocity * sample_time)/2);
 
-    approximate_values.omega = (speed_r - speed_l)/ apparent_baseline;
+    approximate_values.omega = (speed_r - speed_l)/ APPARENT_BASELINE;
 
     approximate_values.v_x = ((speed_r - speed_l)/2) * cos(approximate_values.theta);
     approximate_values.v_y = ((speed_r - speed_l)/2) * sin(approximate_values.theta);
@@ -147,6 +157,7 @@ void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_
 
 nav_msgs::Odometry setOdometry(){
 
+	ROS_INFO("ENTRATO IN SETODOMETRY");
     nav_msgs::Odometry odometry;
     odometry.header.stamp = ros::Time::now();
     odometry.header.frame_id = FRAME_ID;
@@ -168,7 +179,7 @@ nav_msgs::Odometry setOdometry(){
 //per associare ad ogni odometry l'approssimazione scelta dall'utente
 robotics_pkg::customOdometry customOdometry(nav_msgs::Odometry odometry, std_msgs::String approximation_model){
 
-    
+    ROS_INFO("ENTRATO IN CUSTOMODOMETRY");
     robotics_pkg::customOdometry customOdometry;
     customOdometry.odometry = odometry;
 	customOdometry.approxMode = approximation_model;
@@ -178,12 +189,11 @@ robotics_pkg::customOdometry customOdometry(nav_msgs::Odometry odometry, std_msg
 
 geometry_msgs::TransformStamped setTransform(){
     
+    ROS_INFO("ENTRATO IN SET TRASFORM");
     geometry_msgs::TransformStamped odomtransform;
     odomtransform.header.stamp = ros::Time::now();
     odomtransform.header.frame_id = FRAME_ID;
-    
-    //vedere inizializzazione "child_frame_id" 
-    //odomtransform.header.child_frame_id = CHILD_FRAME_ID;
+    odomtransform.child_frame_id = CHILD_FRAME_ID;
 
     odomtransform.transform.translation.x = odometry_values.x;
     odomtransform.transform.translation.y = odometry_values.y;
@@ -194,8 +204,9 @@ geometry_msgs::TransformStamped setTransform(){
 
 }
 
-void subCallback(const robotics_pkg::MotorSpeed::ConstPtr& left, const robotics_pkg::MotorSpeed::ConstPtr& right, tf::TransformBroadcaster& broadcaster, ros::Publisher& publisherOdometry, ros::Publisher& publisherCustomOdometry){
+void callback(const robotics_pkg::MotorSpeed::ConstPtr& left, const robotics_pkg::MotorSpeed::ConstPtr& right, tf::TransformBroadcaster& broadcaster, ros::Publisher& publisherOdometry, ros::Publisher& publisherCustomOdometry){
 
+	ROS_INFO("ENTRATO IN SUBCALLBACK");
 	std_msgs::String message;
     double time = (left->header.stamp.toSec() + right->header.stamp.toSec()) / 2;
     double delta_time = time - last_msg_time;
@@ -218,11 +229,18 @@ void subCallback(const robotics_pkg::MotorSpeed::ConstPtr& left, const robotics_
     nav_msgs::Odometry odometry = setOdometry();
     publisherOdometry.publish(odometry);
 
+    ROS_INFO("SET ODOMETRY: %f , %f", odometry.pose.pose.position.x, odometry.pose.pose.position.y);
+    ROS_INFO(" LINEAR: %f , %f , %f", odometry.twist.twist.linear.x, odometry.twist.twist.linear.y, odometry.twist.twist.angular.z );
+
     geometry_msgs::TransformStamped transform = setTransform();
     broadcaster.sendTransform(transform);
 
+    ROS_INFO("SET TRASFORM");
+
     robotics_pkg::customOdometry custom_Odometry = customOdometry(odometry, message);
     publisherCustomOdometry.publish(custom_Odometry);
+
+    ROS_INFO("CUSTODOMETRY");
 }
 
 int main(int argc, char **argv){
@@ -237,27 +255,33 @@ int main(int argc, char **argv){
     odometry_values.v_y = INIT_VELOCITY_Y;
     odometry_values.omega = INIT_ANGULAR_VELOCITY;
     last_msg_time = ros::Time::now().toSec();
+    ROS_INFO("INIZIALIZZATO");
 
 	//publisher creation
 	ros::Publisher odom_publisher = n.advertise<nav_msgs::Odometry>(TOPIC_ID,1000);
     ros::Publisher cust_odom_publisher = n.advertise<robotics_pkg::customOdometry>(CUSTOM_TOPIC_ID,1000);
-   
+   	
+   	ROS_INFO("PUB CREATI");
+
     //dynamic reconfigure
     dynamic_reconfigure::Server<robotics_pkg::parametersConfig> server;
     server.setCallback(boost::bind(&configCallBack, _1, _2));
 
+    ROS_INFO("RECONFIGURE FATTA");
+
     //tf broadcaster
     tf::TransformBroadcaster odom_broadcaster;
 
+    ROS_INFO("BROADCASTER CREATO");
     //message filters
-    message_filters::Subscriber<robotics_pkg::MotorSpeed> left_velocity_sub(n, "LEFT_VELOCITY", 1);
-    message_filters::Subscriber<robotics_pkg::MotorSpeed> right_velocity_sub(n, "RIGHT_VELOCITY", 1);
-    typedef message_filters::sync_policies::ApproximateTime<robotics_pkg::MotorSpeed, robotics_pkg::MotorSpeed> SyncPolicy;
+    message_filters::Subscriber<robotics_pkg::MotorSpeed> left_velocity_sub(n, "/motor_speed_fl", 1000);
+    message_filters::Subscriber<robotics_pkg::MotorSpeed> right_velocity_sub(n, "/motor_speed_fr", 1000);
+    typedef message_filters::sync_policies::ApproximateTime<robotics_pkg::MotorSpeed, robotics_pkg::MotorSpeed> MySyncPolicy;
 
     ROS_INFO("SUBSCRIBER BUILT\n");
-    message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), left_velocity_sub, right_velocity_sub);
+    message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), left_velocity_sub, right_velocity_sub);
     ROS_INFO("SYNCHRONIZER STARTED\n");
-    sync.registerCallback(boost::bind(&subCallback, _1, _2, odom_broadcaster, odom_publisher, cust_odom_publisher));
+    sync.registerCallback(boost::bind(&callback, _1, _2, odom_broadcaster, odom_publisher, cust_odom_publisher));
     ROS_INFO("TOPICS SYNCHRONIZED\n");
 
 
