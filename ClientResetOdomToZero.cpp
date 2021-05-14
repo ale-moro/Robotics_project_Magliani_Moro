@@ -13,10 +13,10 @@ bool reset_to_init(robotics_pkg::ResetOdometryToInit::Request& req,
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "ClientResetOdomToZero");
+  ros::init(argc, argv, "reset_to_init");
   ros::NodeHandle nh;
 
-  ros::ServiceServer service = nh.advertiseService("ClientResetOdomToZero", ClientResetOdomToZero);
+  ros::ServiceServer service = nh.advertiseService("reset_to_init", reset_to_init);
   ROS_INFO("Ready to reset the odometry to (0,0).");
   ros::spin();
 
