@@ -106,16 +106,23 @@ void Euler_Approximation(double sample_time, double speed_r, double speed_l, Odo
     double angular_velocity = (odometry_values.v_r + odometry_values.v_l) / APPARENT_BASELINE;
     double delta_theta = angular_velocity * sample_time;
 
-	speed_r = speed_r/GEAR_RATIO;
-	speed_l = speed_l/GEAR_RATIO;
+	speed_r = speed_r/(GEAR_RATIO*60);
+	speed_l = speed_l/(GEAR_RATIO*60);
 	
     //double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
     //double y0 = RADIUS/Lambda;
     //double apparent_baseline = 2*y0;
 	
-    approximate_values.x += odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
-    approximate_values.y += odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta);
+    approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta);
+    approximate_values.y = odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta);
     approximate_values.theta = odometry_values.theta + delta_theta;
+	
+	
+    if (approximate_values.theta > 2*PI) {
+        approximate_values.theta -= 2*PI;
+    } else if (approximate_values.theta < 0) {
+        approximate_values.theta += 2*PI;
+    }
 	
     approximate_values.omega = angular_velocity;
 
@@ -133,17 +140,23 @@ void Runge_Kutta_Approximation(double sample_time, double speed_r, double speed_
     double angular_velocity = (odometry_values.v_r + odometry_values.v_l) / APPARENT_BASELINE;
     double delta_theta = angular_velocity * sample_time;
 
-	speed_r = speed_r/GEAR_RATIO;
-	speed_l = speed_l/GEAR_RATIO;
+	speed_r = speed_r/(GEAR_RATIO*60);
+	speed_l = speed_l/(GEAR_RATIO*60);
     
     //double Lambda = (odometry_values.v_r + odometry_values.v_l)/(odometry_values.v_r - odometry_values.v_l);
     //double y0 = RADIUS/Lambda;
     //double apparent_baseline = 2*y0;
 
     approximate_values.theta = odometry_values.theta + delta_theta;
+	
+    if (approximate_values.theta > 2*PI) {
+        approximate_values.theta -= 2*PI;
+    } else if (approximate_values.theta < 0) {
+        approximate_values.theta += 2*PI;
+    }
 
-    approximate_values.x += odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
-    approximate_values.y += odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta + (angular_velocity * sample_time)/2);
+    approximate_values.x = odometry_values.x + linear_velocity * sample_time * cos(odometry_values.theta + (angular_velocity * sample_time)/2);
+    approximate_values.y = odometry_values.y + linear_velocity * sample_time * sin(odometry_values.theta + (angular_velocity * sample_time)/2);
 
     approximate_values.omega = (speed_r - speed_l)/APPARENT_BASELINE;
 
