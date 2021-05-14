@@ -41,7 +41,7 @@
 #define EULER_APPROXIMATION true
 #define RUNGE_KUTTA_APPROXIMATION false
 #define GEAR_RATIO 38.0
-#define LENGHT 26
+#define PI 3.14159265
 
 //Struct for odometry pose
 typedef struct odometry_values{
