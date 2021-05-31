@@ -55,17 +55,18 @@ find_package(catkin REQUIRED COMPONENTS
  add_message_files(
    FILES
    customOdometry.msg
-   floatStamped.msg
+   MotorSpeed.msg
 )
 
 ## Generate services in the 'srv' folder
- ##add_service_files(
-  ## FILES
- ##  custom_service.srv
-##)
+   add_service_files(
+     FILES
+     ResetOdometryToPose.srv
+     ResetOdometryToInit.srv
+     )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
+## add_action_files(
 #   FILES
 #   Action1.action
 #   Action2.action
@@ -210,14 +211,17 @@ include_directories(
 # catkin_add_nosetests(test)
 
 add_executable(main_node_eseg src/main_node_od.cpp)
-
 target_link_libraries(main_node_eseg ${catkin_LIBRARIES})
-
 add_dependencies(main_node_eseg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-##add_executable(sub_eseg src/sub.cpp)
+add_executable(sub_eseg src/sub.cpp)
+target_link_libraries(sub_eseg ${catkin_LIBRARIES})
+add_dependencies(sub_eseg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-##target_link_libraries(sub_eseg ${catkin_LIBRARIES})
+add_executable(reset_odom_to_zero src/ResetOdometryToInit.cpp)
+target_link_libraries(reset_odom_to_zero ${catkin_LIBRARIES})
+add_dependecies(reset_odom_to_zero ${catkin_LIBRARIES})
 
-##add_dependencies(sub_eseg ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
+add_executable(reset_odom_to_pose src/ResetOdometryToPose.cpp)
+target_link_libraries(reset_odom_to_pose ${catkin_LIBRARIES})
+add_dependecies(reset_odom_to_pose ${catkin_LIBRARIES})
