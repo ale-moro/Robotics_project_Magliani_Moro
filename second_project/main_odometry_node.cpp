@@ -1,8 +1,8 @@
 #define ACKERMAN_ODOM_H
-#define CHILD_FRAME_ID = "base_link";
-#define FRAME_ID = "odom";
-#define STEERING_FACTOR = 18;
-#define FRONT_REAR_DISTANCE = 1.765; // from cm (176.5) to m
+#define CHILD_FRAME_ID "base_link"
+#define FRAME_ID "odom"
+#define STEERING_FACTOR 18
+#define FRONT_REAR_DISTANCE 1.765 // from cm (176.5) to m
 
 #include <ros/ros.h>
 
