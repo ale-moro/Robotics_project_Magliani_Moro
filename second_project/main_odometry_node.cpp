@@ -6,6 +6,7 @@
 
 #include <ros/ros.h>
 
+#include "robotics2_pkg/customOdometry.h"
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/TransformStamped.h>
