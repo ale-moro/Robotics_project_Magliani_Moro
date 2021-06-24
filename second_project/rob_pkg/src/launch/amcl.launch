@@ -11,14 +11,19 @@
   <arg name="global_frame_id" default="map"/>
 
   <param name="/use_sim_time" value="true"/>
+  
+  <!--  ****** Static TF ***** -->
+  	<node name="tf_static_world2map" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 1 base_link laser 100"/>
+  
+  <!--  ****** IMU data fusion ***** -->
+  	<include file="$(find rob_pkg)/launch/IMU.xml"/>
 
   <!--  ****** Maps *****  -->
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)">
     <param name="frame_id" value="map"/>
   </node>
 
-
-  <!--  ****** amcl *****  -->
+  <!--  ****** AMCL *****  -->
   <include file="$(find rob_pkg)/launch/amcl.launch.xml">
     <arg name="scan_topic" value="scan"/>
     <arg name="use_map_topic" value="true"/>
