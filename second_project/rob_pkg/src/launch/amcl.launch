@@ -13,7 +13,7 @@
   <param name="/use_sim_time" value="true"/>
   
   <!--  ****** Static TF ***** -->
-  	<node name="tf_static_world2map" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 1 base_link laser 100"/>
+  	<node name="tf_static" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 1 base_link laser 100"/>
   
   <!--  ****** IMU data fusion ***** -->
   	<include file="$(find rob_pkg)/launch/IMU.xml"/>
