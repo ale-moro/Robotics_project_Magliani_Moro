@@ -7,7 +7,7 @@ Moro Alessandra
 
 ## Project Description
 
-### Description of the files in the archive
+### Description of the files in the archive:
 
    1) In the launch directory we have:
    
@@ -36,7 +36,7 @@ Moro Alessandra
 	
   5) For the structure of the tf tree we have the frames.pdf that shows the tf_graph.	
 
-### Startup commands
+## Startup commands
 We test our project on ubuntu 18.04 with ROS Melodic, Running on the terminal these commands:
 
 1) In the first terminal roscore
